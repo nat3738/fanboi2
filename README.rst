@@ -11,11 +11,10 @@ The Better Way
 
 We use `Vagrant <http://www.vagrantup.com/>`_ for development environment provisioning. You must first `install Vagrant <http://docs.vagrantup.com/v2/installation/>`_ (and `VirtualBox <https://www.virtualbox.org/>`_ or any other available `providers <http://docs.vagrantup.com/v2/providers/index.html>`_) and run the following commands::
 
-    $ git submodule update --init
     $ vagrant box add precise64 http://files.vagrantup.com/precise64.box
     $ vagrant up
 
-That's it! You can now visit http://localhost:6543/ and proceed on development. After you've done, you can now run either ``vagrant destroy`` to completely remove the VM or ``vagrant halt`` to shutdown the VM. See also `Teardown <http://docs.vagrantup.com/v2/getting-started/teardown.html>`_ section of Vagrant documentation.
+That's it! You can now visit http://localhost:8080/ and proceed on development. After you've done, you can now run either ``vagrant destroy`` to completely remove the VM or ``vagrant halt`` to shutdown the VM. See also `Teardown <http://docs.vagrantup.com/v2/getting-started/teardown.html>`_ section of Vagrant documentation.
 
 The Adventurous Way
 ~~~~~~~~~~~~~~~~~~~
@@ -69,11 +68,6 @@ Above commands will create a board named "Lounge" and "Demo" at ``/lounge`` and 
     $ fb2_update_board development.ini -s lounge -f description
 
 Slug is used here to identify which board to edit. All database fields in board are editable this way. Some field, such as ``settings`` must be a **valid JSON**. Both commands also accepts ``--help`` which will display some available options.
-
-Troubleshooting
----------------
-
-For Vagrant user, if for some reason the URL isn't accessible, you can try visiting http://localhost:9001/ to visit Supervisor web interface and restart all processes.
 
 Contributing
 ------------
