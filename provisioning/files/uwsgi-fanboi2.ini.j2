@@ -1,0 +1,17 @@
+[uwsgi]
+virtualenv = {{ fanboi2_venv }}
+wsgi-file = {{ wsgi_file }}
+uid = {{ user }}
+gid = {{ group }}
+socket = {{ socket }}
+max-requests = 1000
+{% if reload is defined %}
+processes = 1
+py-auto-reload = 1
+{% else %}
+cheaper-algo = backlog
+cheaper-initial = 1
+cheaper = 1
+workers = 4
+cheaper-step = 1
+{% endif %}

@@ -1,0 +1,133 @@
+---
+- hosts: web
+  gather_facts: false
+  sudo: yes
+  tasks:
+    - name: ensure python-software-properties is installed
+      apt: pkg=python-software-properties state=present
+
+    - name: update sources.list to use fastest mirrors
+      action: copy src=files/apt-sources.list dest=/etc/apt/sources.list
+
+    - apt_repository: repo=ppa:rwky/redis
+    - apt_repository: repo=ppa:chris-lea/node.js
+    - apt: update_cache=yes
+
+    - name: ensure all packages are latest
+      apt: pkg=${item} state=latest
+      with_items:
+        - build-essential
+        - nginx-full
+        - nodejs
+        - postgresql-9.1
+        - postgresql-server-dev-9.1
+        - python-psycopg2
+        - python3
+        - python3-dev
+        - python3-setuptools
+        - redis-server
+
+
+- hosts: web
+  gather_facts: false
+  sudo_user: postgres
+  sudo: yes
+  tasks:
+    - name: setup postgresql fanboi2 user role
+      postgresql_user: name=fanboi2 password=${pg_password} state=present
+
+    - name: setup postgresql fanboi2 databases
+      postgresql_db: name=${item} owner=fanboi2 state=present
+      with_items:
+        - fanboi2
+        - fanboi2_dev
+        - fanboi2_test
+
+
+- hosts: web
+  gather_facts: false
+  sudo: yes
+  vars:
+    python_version: "3.2"
+
+    brunch: /usr/bin/brunch
+    npm: /usr/bin/npm
+    pip: /usr/local/bin/pip-$python_version
+    site_package: $fanboi2_venv/lib/python$python_version/site-packages
+    uwsgi: /usr/local/bin/uwsgi
+    virtualenv: /usr/local/bin/virtualenv-$python_version
+
+  tasks:
+    - name: install pip for python3
+      command: easy_install3 pip creates=$pip
+
+    - name: install uwsgi using python3
+      command: $pip install uwsgi creates=$uwsgi
+
+    - name: install virtualenv for python3
+      command: $pip install virtualenv creates=$virtualenv
+
+    - name: setup virtualenv for fanboi2 using python3
+      command: $virtualenv -p python3 $fanboi2_venv creates=$fanboi2_venv
+
+    - name: install brunch for fanboi2 assets compilation
+      command: $npm install -g brunch creates=$brunch
+
+    - name: chown fanboi2 directory
+      file:
+        path: $fanboi2_venv
+        owner: vagrant
+        group: vagrant
+        recurse: yes
+        state: directory
+
+
+- hosts: web
+  gather_facts: false
+  user: vagrant
+  tasks:
+    - name: setup fanboi2 using python3 virtualenv
+      command: >
+        $fanboi2_venv/bin/python setup.py develop
+        chdir=$fanboi2_root
+        creates=$site_package/fanboi2.egg-link
+
+    - name: migrate fanboi2 databases
+      command: $fanboi2_venv/bin/alembic upgrade head chdir=$fanboi2_root
+
+
+- hosts: web
+  gather_facts: false
+  user: vagrant
+  sudo: yes
+  vars:
+    uwsgi_dir: /etc/uwsgi
+    wsgi_file: $uwsgi_dir/fanboi2.wsgi
+    config_ini: $fanboi2_root/development.ini
+    socket: "127.0.0.1:9001"
+    user: vagrant
+    group: vagrant
+
+  tasks:
+    - name: create uwsgi configuration directory
+      file: path=/etc/uwsgi state=directory
+
+    - name: setup uwsgi script for fanboi2
+      template:
+        src: files/uwsgi-fanboi2.wsgi.j2
+        dest: $wsgi_file
+
+    - name: setup uwsgi configuration for fanboi2
+      template: src=files/uwsgi-fanboi2.ini.j2 dest=/etc/uwsgi/fanboi2.ini
+
+    - name: autostart uwsgi using upstart
+      action: copy src=files/init-uwsgi.conf dest=/etc/init/uwsgi.conf
+
+    - name: setup nginx configuration for fanboi2
+      template: src=files/nginx-nginx.conf.j2 dest=/etc/nginx/nginx.conf
+
+    - name: enable services using upstart
+      service: name=$item state=restarted
+      with_items:
+        - uwsgi
+        - nginx

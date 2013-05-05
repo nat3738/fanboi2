@@ -1,0 +1,41 @@
+user {{ user }} {{ group }};
+worker_processes 4;
+pid /var/run/nginx.pid;
+error_log /var/log/nginx/error.log;
+
+events {
+  worker_connections 512;
+}
+
+http {
+  include mime.types;
+  default_type application/octet-stream;
+  types_hash_max_size 2048;
+  server_names_hash_bucket_size 64;
+  keepalive_timeout 65;
+  tcp_nodelay on;
+  tcp_nopush on;
+  sendfile on;
+
+  gzip on;
+  gzip_buffers 16 8k;
+  gzip_comp_level 9;
+  gzip_min_length 16;
+
+  client_max_body_size 32m;
+
+  server {
+    listen 80;
+    access_log /var/log/nginx/fanboi.access.log combined;
+
+    location /static {
+      alias {{ fanboi2_root }}/static;
+    }
+
+    location / {
+      uwsgi_pass {{ socket }};
+      include uwsgi_params;
+      expires 0;
+    }
+  }
+}

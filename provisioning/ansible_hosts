@@ -1,0 +1,8 @@
+[web]
+localhost
+
+[web:vars]
+fanboi2_root=/vagrant
+fanboi2_venv=/usr/local/venv/fanboi2
+pg_password=dev
+reload=1
